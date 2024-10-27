@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  editor_quick_open.h                                                   */
+/*  editor_version_button.cpp                                             */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,62 +28,58 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef EDITOR_QUICK_OPEN_H
-#define EDITOR_QUICK_OPEN_H
+#include "editor_version_button.h"
 
-#include "core/templates/oa_hash_map.h"
-#include "editor/editor_file_system.h"
-#include "scene/gui/dialogs.h"
-#include "scene/gui/tree.h"
+#include "core/os/time.h"
+#include "core/version.h"
 
-class EditorQuickOpen : public ConfirmationDialog {
-	GDCLASS(EditorQuickOpen, ConfirmationDialog);
+String _get_version_string(EditorVersionButton::VersionFormat p_format) {
+	String main;
+	switch (p_format) {
+		case EditorVersionButton::FORMAT_BASIC: {
+			return VERSION_FULL_CONFIG;
+		} break;
+		case EditorVersionButton::FORMAT_WITH_BUILD: {
+			main = "v" VERSION_FULL_BUILD;
+		} break;
+		case EditorVersionButton::FORMAT_WITH_NAME_AND_BUILD: {
+			main = VERSION_FULL_NAME;
+		} break;
+		default: {
+			ERR_FAIL_V_MSG(VERSION_FULL_NAME, "Unexpected format: " + itos(p_format));
+		} break;
+	}
 
-	static Rect2i prev_rect;
-	static bool was_showed;
+	String hash = VERSION_HASH;
+	if (!hash.is_empty()) {
+		hash = vformat(" [%s]", hash.left(9));
+	}
+	return main + hash;
+}
 
-	LineEdit *search_box = nullptr;
-	Tree *search_options = nullptr;
-	String base_type;
-	bool allow_multi_select = false;
+void EditorVersionButton::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_POSTINITIALIZE: {
+			// This can't be done in the constructor because theme cache is not ready yet.
+			set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+			set_text(_get_version_string(format));
+		} break;
+	}
+}
 
-	Vector<String> files;
-	OAHashMap<String, Ref<Texture2D>> icons;
+void EditorVersionButton::pressed() {
+	DisplayServer::get_singleton()->clipboard_set(_get_version_string(FORMAT_WITH_BUILD));
+}
 
-	struct Entry {
-		String path;
-		float score = 0;
-	};
+EditorVersionButton::EditorVersionButton(VersionFormat p_format) {
+	format = p_format;
+	set_underline_mode(LinkButton::UNDERLINE_MODE_ON_HOVER);
 
-	struct EntryComparator {
-		_FORCE_INLINE_ bool operator()(const Entry &A, const Entry &B) const {
-			return A.score > B.score;
-		}
-	};
-
-	void _update_search();
-	void _build_search_cache(EditorFileSystemDirectory *p_efsd);
-	float _score_search_result(const PackedStringArray &p_search_tokens, const String &p_path);
-
-	void _confirmed();
-	virtual void cancel_pressed() override;
-	void _cleanup();
-
-	void _sbox_input(const Ref<InputEvent> &p_event);
-	void _text_changed(const String &p_newtext);
-
-protected:
-	void _notification(int p_what);
-	static void _bind_methods();
-
-public:
-	String get_base_type() const;
-
-	String get_selected() const;
-	Vector<String> get_selected_files() const;
-
-	void popup_dialog(const String &p_base, bool p_enable_multi = false, bool p_dontclear = false);
-	EditorQuickOpen();
-};
-
-#endif // EDITOR_QUICK_OPEN_H
+	String build_date;
+	if (VERSION_TIMESTAMP > 0) {
+		build_date = Time::get_singleton()->get_datetime_string_from_unix_time(VERSION_TIMESTAMP, true) + " UTC";
+	} else {
+		build_date = TTR("(unknown)");
+	}
+	set_tooltip_text(vformat(TTR("Git commit date: %s\nClick to copy the version information."), build_date));
+}

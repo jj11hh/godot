@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  cpu_particles_2d_editor_plugin.h                                      */
+/*  editor_expression_evaluator.h                                         */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,67 +28,50 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef CPU_PARTICLES_2D_EDITOR_PLUGIN_H
-#define CPU_PARTICLES_2D_EDITOR_PLUGIN_H
+#ifndef EDITOR_EXPRESSION_EVALUATOR_H
+#define EDITOR_EXPRESSION_EVALUATOR_H
 
-#include "editor/plugins/editor_plugin.h"
-#include "scene/2d/cpu_particles_2d.h"
-#include "scene/2d/physics/collision_polygon_2d.h"
 #include "scene/gui/box_container.h"
 
+class Button;
 class CheckBox;
-class ConfirmationDialog;
-class SpinBox;
-class EditorFileDialog;
-class MenuButton;
-class OptionButton;
+class EditorDebuggerInspector;
+class LineEdit;
+class RemoteDebuggerPeer;
+class ScriptEditorDebugger;
 
-class CPUParticles2DEditorPlugin : public EditorPlugin {
-	GDCLASS(CPUParticles2DEditorPlugin, EditorPlugin);
+class EditorExpressionEvaluator : public VBoxContainer {
+	GDCLASS(EditorExpressionEvaluator, VBoxContainer)
 
-	enum {
-		MENU_LOAD_EMISSION_MASK,
-		MENU_CLEAR_EMISSION_MASK,
-		MENU_RESTART,
-		MENU_CONVERT_TO_GPU_PARTICLES,
-	};
+private:
+	Ref<RemoteDebuggerPeer> peer;
 
-	enum EmissionMode {
-		EMISSION_MODE_SOLID,
-		EMISSION_MODE_BORDER,
-		EMISSION_MODE_BORDER_DIRECTED
-	};
+	LineEdit *expression_input = nullptr;
+	CheckBox *clear_on_run_checkbox = nullptr;
+	Button *evaluate_btn = nullptr;
+	Button *clear_btn = nullptr;
 
-	CPUParticles2D *particles = nullptr;
+	EditorDebuggerInspector *inspector = nullptr;
 
-	EditorFileDialog *file = nullptr;
+	void _evaluate();
+	void _clear();
 
-	HBoxContainer *toolbar = nullptr;
-	MenuButton *menu = nullptr;
-
-	ConfirmationDialog *emission_mask = nullptr;
-	OptionButton *emission_mask_mode = nullptr;
-	CheckBox *emission_mask_centered = nullptr;
-	CheckBox *emission_colors = nullptr;
-
-	String source_emission_file;
-
-	void _file_selected(const String &p_file);
-	void _menu_callback(int p_idx);
-	void _generate_emission_mask();
+	void _remote_object_selected(ObjectID p_id);
+	void _on_expression_input_changed(const String &p_expression);
+	void _on_debugger_breaked(bool p_breaked, bool p_can_debug);
+	void _on_debugger_clear_execution(Ref<Script> p_stack_script);
 
 protected:
+	ScriptEditorDebugger *editor_debugger = nullptr;
+
 	void _notification(int p_what);
 
 public:
-	virtual String get_name() const override { return "CPUParticles2D"; }
-	bool has_main_screen() const override { return false; }
-	virtual void edit(Object *p_object) override;
-	virtual bool handles(Object *p_object) const override;
-	virtual void make_visible(bool p_visible) override;
+	void on_start();
+	void set_editor_debugger(ScriptEditorDebugger *p_editor_debugger);
+	void add_value(const Array &p_array);
 
-	CPUParticles2DEditorPlugin();
-	~CPUParticles2DEditorPlugin();
+	EditorExpressionEvaluator();
 };
 
-#endif // CPU_PARTICLES_2D_EDITOR_PLUGIN_H
+#endif // EDITOR_EXPRESSION_EVALUATOR_H
