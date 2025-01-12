@@ -33,7 +33,6 @@
 #include "core/io/file_access.h"
 #include "core/io/resource_saver.h"
 #include "scene/3d/importer_mesh_instance_3d.h"
-#include "scene/3d/mesh_instance_3d.h"
 #include "scene/3d/node_3d.h"
 #include "scene/resources/3d/importer_mesh.h"
 #include "scene/resources/mesh.h"
@@ -535,16 +534,16 @@ static Error _parse_obj(const String &p_path, List<Ref<ImporterMesh>> &r_meshes,
 		}
 	}
 
-	mesh->optimize_indices_for_cache();
-
 	if (p_generate_lods) {
 		// Use normal merge/split angles that match the defaults used for 3D scene importing.
-		mesh->generate_lods(60.0f, 25.0f, {});
+		mesh->generate_lods(60.0f, {});
 	}
 
 	if (p_generate_shadow_mesh) {
 		mesh->create_shadow_mesh();
 	}
+
+	mesh->optimize_indices();
 
 	if (p_single_mesh && mesh->get_surface_count() > 0) {
 		r_meshes.push_back(mesh);
@@ -646,7 +645,7 @@ bool ResourceImporterOBJ::get_option_visibility(const String &p_path, const Stri
 	return true;
 }
 
-Error ResourceImporterOBJ::import(const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
+Error ResourceImporterOBJ::import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
 	List<Ref<ImporterMesh>> meshes;
 
 	Vector<uint8_t> src_lightmap_cache;
